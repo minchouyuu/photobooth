@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>photobooth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Fraunces:ital,wght@0,500;1,400;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Decor nằm phía sau nội dung -->
+  <div class="decor" aria-hidden="true">
+    <img data-d="nơ 3.png"   class="keep" style="left:3%;top:16%;width:64px;--r:-14deg">
+    <img data-d="nơ 1.png"   class="keep" style="right:4%;top:9%;width:96px;--r:9deg">
+    <img data-d="sao 1.png"  class="keep" style="left:7%;bottom:13%;width:46px;--r:12deg">
+    <img data-d="sao 2.png"  style="right:6%;bottom:24%;width:40px;--r:-10deg">
+    <img data-d="nhạc 2.png" class="keep" style="right:3%;top:42%;width:38px;--r:14deg">
+    <img data-d="nhạc 5.png" style="left:2.5%;top:54%;width:34px;--r:-12deg">
+    <img data-d="nhạc 3.png" style="right:9%;bottom:6%;width:56px;--r:-8deg">
+    <img data-d="nhạc 1.png" style="left:11%;top:6%;width:44px;--r:10deg">
+    <img data-d="thỏ 3.png"  style="left:5%;bottom:3%;width:78px;--r:-4deg">
+    <img data-d="thỏ 6.png"  style="right:2%;bottom:3%;width:64px;--r:5deg">
+  </div>
+
+  <header>
+    <div class="lace lace-top"></div>
+    <h1>photobooth</h1>
+    <ol class="steps" id="steps">
+      <li class="on">Chụp</li><li>Chọn ảnh</li><li>Chọn frame</li><li>Filter</li>
+    </ol>
+  </header>
+
+  <main>
+    <!-- BƯỚC 1: CHỤP -->
+    <section id="s1" class="capture portrait-mode">
+      <div class="camwrap">
+        <div class="cam">
+          <video id="vid" class="flip" playsinline muted></video>
+          <div id="camEmpty" class="cam-empty">Chưa bật camera</div>
+          <div id="cd" class="count" aria-live="assertive"></div>
+          <div id="flash"></div>
+        </div>
+        <img class="pin" data-d="nơ 2.png" alt="">
+      </div>
+
+      <div class="card side">
+        <h2>Chụp 6 tấm</h2>
+        <p id="msg">Chọn kiểu frame và bật camera để bắt đầu nhé.</p>
+
+        <div class="mode-select" role="group" aria-label="Chọn số lượng ảnh trong frame">
+          <button type="button" class="mode-btn" data-count="4" aria-pressed="true">Frame 4 ảnh (dọc)</button>
+          <button type="button" class="mode-btn" data-count="3" aria-pressed="false">Frame 3 ảnh (ngang)</button>
+        </div>
+
+        <ol class="rolls" id="rolls"></ol>
+        <label class="check"><input type="checkbox" id="mirror" checked> Lật gương</label>
+        <div class="actions">
+          <button id="go" class="primary">Bật camera</button>
+          <button id="stop" class="ghost" hidden>Dừng</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BƯỚC 2–4: CHỌN ẢNH / FRAME / FILTER -->
+    <section id="editor" class="editor portrait-mode" hidden>
+      <div class="sheet">
+        <canvas id="cv" aria-label="Xem trước dải ảnh"></canvas>
+        <img class="pin" data-d="nơ 3.png" alt="">
+      </div>
+
+      <div class="card panel">
+        <div id="p2">
+          <h2>Chọn ảnh</h2>
+          <p class="hint" id="hint2"></p>
+          <div class="picks" id="picks"></div>
+        </div>
+        <div id="p3" hidden>
+          <h2>Chọn frame</h2>
+          <div class="frames" id="frames"></div>
+          <p class="hint" id="hint3"></p>
+        </div>
+        <div id="p4" hidden>
+          <h2>Chọn filter</h2>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <div class="actions">
+          <button id="back" class="ghost">Chụp lại</button>
+          <button id="next" class="primary">Tiếp tục</button>
+          <button id="again" class="link" hidden>Chụp lại từ đầu</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="lace lace-bottom" aria-hidden="true"></div>
+  <p id="toast" role="status"></p>
+  <script src="script.js"></script>
+</body>
+</html>
