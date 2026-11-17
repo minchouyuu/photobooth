@@ -14,6 +14,7 @@
 
 html, body {
   margin: 0; padding: 0;
+  width: 100%;
   min-height: 100dvh;
   overflow-x: hidden;
 }
@@ -25,7 +26,7 @@ body {
   position: relative;
 }
 
-/* Lớp nền riêng biệt để không bị lỗi vỡ/zoom trên Safari iOS */
+/* Lớp nền riêng biệt để hiển thị sắc nét trên cả PC và Safari iOS */
 body::before {
   content: "";
   position: fixed;
@@ -96,6 +97,7 @@ main {
   margin: 0 auto; padding: 0 1.1rem 2.8rem;
 }
 .card {
+  width: 100%;
   background: var(--cream); border-radius: 26px;
   box-shadow: 0 12px 32px rgba(95, 80, 140, .12);
   padding: 1.4rem;
@@ -108,7 +110,7 @@ main {
   margin-bottom: .45rem;
 }
 h2 { margin: 0; font: italic 600 1.55rem / 1.15 var(--display); }
-.hint, #msg { margin: 0 0 .85rem; color: var(--soft); font-size: .9rem; min-height: 2.4em; }
+.hint, #msg { margin: 0 0 .85rem; color: var(--soft); font-size: .9rem; min-height: 2.2em; }
 
 /* ---------- chọn thời gian đếm ngược ---------- */
 .timer-pill {
@@ -122,17 +124,18 @@ h2 { margin: 0; font: italic 600 1.55rem / 1.15 var(--display); }
   background: var(--ink); color: var(--cream);
 }
 
-/* ---------- chọn frame ngay từ đầu ---------- */
-.pre-frames {
+/* ---------- chọn frame dạng lướt ngang ---------- */
+.pre-frames, .frames {
   display: flex;
-  gap: .55rem;
+  flex-wrap: nowrap;
+  gap: .6rem;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 2px 2px .6rem;
+  padding: 2px 2px .65rem;
   margin-bottom: .8rem;
   scrollbar-width: thin;
 }
-.pre-frame-btn {
+.pre-frame-btn, .frame-opt {
   flex: 0 0 auto;
   display: grid;
   justify-items: center;
@@ -143,11 +146,17 @@ h2 { margin: 0; font: italic 600 1.55rem / 1.15 var(--display); }
   border-radius: 14px;
   transition: all .15s;
 }
-.pre-frame-btn:hover:not(:disabled) { border-color: var(--ink); }
+.pre-frame-btn:hover:not(:disabled), .frame-opt:hover { border-color: var(--ink); }
 .pre-frame-btn img {
-  height: 74px;
+  height: 76px;
   width: auto;
   border-radius: 6px;
+  background: var(--pink);
+}
+.frame-opt img {
+  height: 112px;
+  width: auto;
+  border-radius: 8px;
   background: var(--pink);
 }
 .pre-frame-btn span {
@@ -156,27 +165,37 @@ h2 { margin: 0; font: italic 600 1.55rem / 1.15 var(--display); }
   color: var(--ink);
   line-height: 1.1;
 }
-.pre-frame-btn small {
-  font-size: .68rem;
+.pre-frame-btn small, .frame-opt small {
+  font-size: .7rem;
   color: var(--soft);
   line-height: 1;
 }
-.pre-frame-btn[aria-pressed="true"] {
+.pre-frame-btn[aria-pressed="true"], .frame-opt[aria-pressed="true"] {
   background: var(--blue);
   border-color: var(--ink);
 }
 
 /* ---------- bước 1: chụp ---------- */
-.capture { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 2rem; align-items: start; }
-.camwrap { position: relative; justify-self: center; width: 100%; transition: max-width .25s; }
+.capture {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.camwrap {
+  position: relative;
+  margin: 0 auto;
+  width: 100%;
+  transition: max-width .25s;
+}
 .cam {
-  position: relative; aspect-ratio: 4 / 3; overflow: hidden;
+  position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden;
   background: var(--blue); border: 5px solid var(--cream); border-radius: 28px;
   box-shadow: 0 14px 34px rgba(95, 80, 140, .16);
   transition: aspect-ratio .25s;
 }
 
-.portrait-mode .camwrap { max-width: 420px; }
+.portrait-mode .camwrap { max-width: 410px; }
 .portrait-mode .cam { aspect-ratio: 3 / 4; }
 .portrait-mode .rolls li,
 .portrait-mode .pick img { aspect-ratio: 3 / 4; }
@@ -217,21 +236,42 @@ video.flip { transform: scaleX(-1); }
 #flash.on { animation: flash .6s ease-out; }
 @keyframes flash { from { opacity: .95; } to { opacity: 0; } }
 
-.rolls { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin: 0 0 .9rem; padding: 0; list-style: none; }
-.rolls li {
-  aspect-ratio: 4 / 3; display: grid; place-items: center; overflow: hidden;
-  background: var(--pink); border-radius: 12px; color: var(--soft); font-size: .85rem;
+/* Lưới 6 ảnh thu nhỏ gọn gàng */
+.rolls {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: .4rem;
+  margin: 0 0 .9rem;
+  padding: 0;
+  list-style: none;
 }
-.rolls img { width: 100%; height: 100%; object-fit: cover; }
+.rolls li {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--pink);
+  border-radius: 10px;
+  color: var(--soft);
+  font-size: .78rem;
+  font-weight: 600;
+}
+.rolls img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .toggles { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; margin-bottom: .9rem; }
 .check { display: inline-flex; align-items: center; gap: .45rem; font-size: .9rem; cursor: pointer; }
 input[type="checkbox"] { width: 1.05rem; height: 1.05rem; accent-color: var(--ink); }
 
 /* ---------- bước 2–4: chỉnh ---------- */
-.editor { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 2.2rem; align-items: start; }
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  gap: 2.2rem;
+  align-items: start;
+}
 .sheet {
-  position: relative; justify-self: center; background: #fff; padding: 10px; border-radius: 22px;
+  position: relative; margin: 0 auto; background: #fff; padding: 10px; border-radius: 22px;
   box-shadow: 0 14px 34px rgba(95, 80, 140, .16);
 }
 #cv {
@@ -255,15 +295,6 @@ input[type="checkbox"] { width: 1.05rem; height: 1.05rem; accent-color: var(--in
 }
 .pick span:empty { display: none; }
 .pick[aria-pressed="true"] { border-color: var(--ink); }
-
-.frames { display: flex; flex-wrap: wrap; gap: .65rem; margin-bottom: .8rem; }
-.frame-opt {
-  display: grid; justify-items: center; gap: .3rem; padding: 7px 7px 6px; background: #fff;
-  border: 2px solid var(--pink); border-radius: 16px;
-}
-.frame-opt img { height: 114px; width: auto; border-radius: 8px; background: var(--pink); }
-.frame-opt small { color: var(--soft); font-size: .78rem; }
-.frame-opt[aria-pressed="true"] { border-color: var(--ink); background: var(--blue); }
 
 .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
 .chip {
@@ -306,7 +337,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue2); out
   header { padding-bottom: .9rem; }
   h1 { margin-bottom: .65rem; }
 
-  /* Thanh bước gọn trên 1 hàng */
   .steps { gap: .3rem; padding: 0 .6rem; }
   .steps li { padding: .3rem .65rem; font-size: .78rem; }
 
@@ -314,13 +344,34 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue2); out
   .card { padding: 1.1rem; border-radius: 22px; }
   h2 { font-size: 1.38rem; }
 
-  .capture, .editor { grid-template-columns: 1fr; gap: 1.1rem; }
+  /* Đưa về 1 cột thẳng hàng chuẩn giữa màn hình */
+  .capture, .editor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
 
-  /* Camera gọn gàng trên màn hình dọc điện thoại */
-  .portrait-mode .camwrap { max-width: 76vw; }
-  .camwrap { max-width: 92vw; }
+  /* Căn giữa khung camera chuẩn xác, không bao giờ lệch */
+  .camwrap {
+    width: 86vw;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+  .portrait-mode .camwrap {
+    width: 68vw;
+    max-width: 280px;
+    margin: 0 auto;
+  }
   .cam { border-width: 4px; border-radius: 24px; }
-  .pin { width: 48px; top: -12px; left: -10px; }
+  .pin { width: 46px; top: -12px; left: -10px; }
+
+  /* 6 ô ảnh thu nhỏ nằm gọn 1 hàng ngang vừa khít thẻ */
+  .rolls {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: .35rem;
+  }
+  .rolls li { border-radius: 8px; font-size: .72rem; }
 
   /* Ghim ảnh xem trước ở đầu màn hình khi chỉnh sửa trên điện thoại */
   .sheet {
@@ -338,14 +389,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue2); out
     max-width: 82vw;
   }
 
-  /* Lưới chọn frame trên mobile chia 3 cột đều nhau */
-  .frames {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: .5rem;
-  }
-  .frame-opt { padding: 6px 4px; }
-  .frame-opt img { height: 88px; }
+  .frame-opt img { height: 92px; }
 
   /* Ẩn bớt icon decor rìa ngoài để không che chữ trên màn hình nhỏ */
   .decor img:not(.keep) { display: none; }
