@@ -1,8 +1,7 @@
 /* ================= CẤU HÌNH ================= */
-const SHOTS = 6;            // số tấm chụp
-const WAIT = 6;             // số giây đợi trước mỗi tấm
+const SHOTS = 6;            // số tấm chụp tối đa
 const ROOT = 'files/';      // thư mục chứa frame/ và decor/
-const PAD = 3;              // lấn viền nhẹ 3px để lấp kín khung, không hở trắng
+const PAD = 3;              // lấn viền nhẹ 3px để lấp kín khung
 
 const SLOTS_4 = [[69, 51, 423, 538], [537, 51, 412, 538], [69, 626, 423, 538], [525, 616, 435, 558]];
 const SLOTS_2 = [[85, 50, 538, 412], [83, 544, 540, 413], [98, 1058, 508, 374]];
@@ -35,9 +34,12 @@ const $ = id => document.getElementById(id);
 const asset = p => encodeURI(ROOT + p);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const cv = $('cv'), ctx = cv.getContext('2d'), vid = $('vid'), cd = $('cd');
+const camOverlay = $('camOverlay'), octx = camOverlay.getContext('2d');
 
 let stream = null, running = false, cancel = false;
-let targetCount = 4; // mặc định Frame 4 ảnh (camera dọc)
+let waitSec = 5;
+let targetCount = 4;
+let activeSlotIdx = 0;
 let photos = [], thumbs = [], picked = [];
 let step = 1, fi = 0, filt = 0;
 const cache = new Map();
@@ -48,9 +50,12 @@ document.body.style.setProperty('--bg', `url("${asset('decor/nền.png')}")`);
 document.body.style.setProperty('--ren', `url("${asset('decor/ren.png')}")`);
 
 // nạp frame
-const imgs = FRAMES.map(f => {
+const imgs = FRAMES.map((f, idx) => {
   const i = new Image();
-  i.onload = () => { if (step > 1) draw(); };
+  i.onload = () => {
+    if (step === 1 && idx === fi) drawCamOverlay();
+    if (step > 1) draw();
+  };
   i.onerror = () => toast(`Không tìm thấy "${ROOT + f.src}". Kiểm tra lại thư mục files/frame/.`);
   i.src = asset(f.src);
   return i;
@@ -64,25 +69,77 @@ function toast(t) {
 }
 const say = t => { $('msg').textContent = t; };
 
-// Đồng bộ giao diện camera dọc (4 ảnh) hoặc ngang (3 ảnh)
-function syncOrientation() {
-  const isPortrait = targetCount === 4;
-  $('s1').classList.toggle('portrait-mode', isPortrait);
-  $('editor').classList.toggle('portrait-mode', isPortrait);
-}
-
-// Chọn loại frame 4 ảnh hoặc 3 ảnh ngay từ đầu
-document.querySelectorAll('.mode-btn').forEach(btn => {
+// Chọn thời gian đếm ngược (3s / 5s / 8s)
+document.querySelectorAll('.t-btn').forEach(btn => {
   btn.onclick = () => {
-    targetCount = Number(btn.dataset.count);
-    document.querySelectorAll('.mode-btn').forEach(b => b.setAttribute('aria-pressed', b === btn));
-    fi = FRAMES.findIndex(f => f.slots.length === targetCount);
-    if (fi < 0) fi = 0;
-    syncOrientation();
+    if (running) return;
+    waitSec = Number(btn.dataset.sec);
+    document.querySelectorAll('.t-btn').forEach(b => b.setAttribute('aria-pressed', b === btn));
   };
 });
 
-/* ================= BƯỚC 1: CHỤP ================= */
+// Đồng bộ giao diện camera dọc (4 ảnh) hoặc ngang (3 ảnh)
+function syncOrientation() {
+  targetCount = FRAMES[fi].slots.length;
+  const isPortrait = targetCount === 4;
+  $('s1').classList.toggle('portrait-mode', isPortrait);
+  $('editor').classList.toggle('portrait-mode', isPortrait);
+  drawCamOverlay();
+}
+
+// Vẽ lớp phủ frame lên màn hình camera
+function drawCamOverlay() {
+  const show = $('showFrameCam').checked;
+  const totalSlots = FRAMES[fi].slots.length;
+  camOverlay.hidden = !show;
+  $('slotBadge').hidden = !show;
+
+  if (!show) return;
+  $('slotBadge').textContent = `Ô ${(activeSlotIdx % totalSlots) + 1}/${totalSlots}`;
+
+  const im = imgs[fi];
+  const slot = FRAMES[fi].slots[activeSlotIdx % totalSlots];
+  if (!slot) return;
+
+  const [sx, sy, sw, sh] = slot;
+  camOverlay.width = sw;
+  camOverlay.height = sh;
+  octx.clearRect(0, 0, sw, sh);
+
+  if (im && im.naturalWidth) {
+    octx.drawImage(im, sx, sy, sw, sh, 0, 0, sw, sh);
+  }
+
+  octx.save();
+  octx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+  octx.lineWidth = 2;
+  octx.setLineDash([8, 6]);
+  octx.strokeRect(4, 4, sw - 8, sh - 8);
+  octx.restore();
+}
+
+// Dựng danh sách chọn nhanh Frame ngay tại Bước 1
+function buildPreFrames() {
+  const box = $('preFrames');
+  box.innerHTML = '';
+  FRAMES.forEach((f, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pre-frame-btn';
+    b.setAttribute('aria-pressed', i === fi);
+    b.innerHTML = `<img src="${asset(f.src)}" alt="${f.name}"><span>${f.name}</span><small>${f.slots.length} ảnh</small>`;
+    b.onclick = () => {
+      if (running) return;
+      fi = i;
+      activeSlotIdx = 0;
+      buildPreFrames();
+      syncOrientation();
+    };
+    box.appendChild(b);
+  });
+}
+
+/* ================= BƯỚC 1: CHỤP & TẢI ẢNH ================= */
 function buildRolls() {
   $('rolls').innerHTML = '';
   for (let i = 0; i < SHOTS; i++) {
@@ -96,7 +153,7 @@ function ui1() {
   $('go').textContent = !stream ? 'Bật camera' : running ? 'Đang chụp…' : 'Bắt đầu chụp';
   $('go').disabled = running;
   $('stop').hidden = !running;
-  document.querySelectorAll('.mode-btn').forEach(b => { b.disabled = running; });
+  document.querySelectorAll('.pre-frame-btn, .t-btn').forEach(b => { b.disabled = running; });
 }
 
 async function startCam() {
@@ -107,50 +164,56 @@ async function startCam() {
     vid.srcObject = stream;
     await vid.play();
     $('camEmpty').hidden = true;
-    say(`Sẵn sàng rồi! Web sẽ chụp ${SHOTS} tấm, mỗi tấm đếm ngược ${WAIT} giây.`);
+    say(`Sẵn sàng rồi! Web sẽ chụp ${SHOTS} tấm, mỗi tấm đếm ngược ${waitSec} giây.`);
+    drawCamOverlay();
   } catch (e) {
-    say('Không mở được camera. Hãy cho phép quyền camera và mở trang bằng localhost hoặc https.');
+    say('Không mở được camera. Hãy cho phép quyền camera hoặc dùng nút “Tải ảnh lên”.');
   }
   ui1();
 }
 
-// Chụp đúng tỉ lệ đang hiển thị trên khung camera (3:4 dọc nếu là 4 ảnh, 4:3 ngang nếu là 3 ảnh)
-function snap() {
-  const vw = vid.videoWidth, vh = vid.videoHeight;
+function cropToSlotRatio(source, w, h, mirror = false) {
   const targetRatio = targetCount === 4 ? (3 / 4) : (4 / 3);
-  const srcRatio = vw / vh;
+  const srcRatio = w / h;
+  let sw = w, sh = h, sx = 0, sy = 0;
 
-  let sw = vw, sh = vh, sx = 0, sy = 0;
   if (srcRatio > targetRatio) {
-    sw = Math.round(vh * targetRatio);
-    sx = Math.round((vw - sw) / 2);
+    sw = Math.round(h * targetRatio);
+    sx = Math.round((w - sw) / 2);
   } else {
-    sh = Math.round(vw / targetRatio);
-    sy = Math.round((vh - sh) / 2);
+    sh = Math.round(w / targetRatio);
+    sy = Math.round((h - sh) / 2);
   }
 
   const c = document.createElement('canvas');
   c.width = sw;
   c.height = sh;
   const x = c.getContext('2d');
-  if ($('mirror').checked) {
+  if (mirror) {
     x.translate(c.width, 0);
     x.scale(-1, 1);
   }
-  x.drawImage(vid, sx, sy, sw, sh, 0, 0, sw, sh);
+  x.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
   return c;
+}
+
+function snap() {
+  return cropToSlotRatio(vid, vid.videoWidth, vid.videoHeight, $('mirror').checked);
 }
 
 async function shoot() {
   running = true; cancel = false;
   photos = []; thumbs = []; picked = []; cache.clear();
-  fi = FRAMES.findIndex(f => f.slots.length === targetCount);
-  if (fi < 0) fi = 0;
   buildRolls(); ui1();
 
+  const totalSlots = FRAMES[fi].slots.length;
+
   for (let i = 0; i < SHOTS && !cancel; i++) {
-    say(`Tấm ${i + 1}/${SHOTS} — tạo dáng nhé!`);
-    for (let t = WAIT; t > 0 && !cancel; t--) {
+    activeSlotIdx = i % totalSlots;
+    drawCamOverlay();
+
+    say(`Tấm ${i + 1}/${SHOTS} (căn theo ô ${activeSlotIdx + 1}/${totalSlots}) — tạo dáng nhé!`);
+    for (let t = waitSec; t > 0 && !cancel; t--) {
       cd.textContent = t;
       cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
       await wait(1000);
@@ -159,13 +222,17 @@ async function shoot() {
     if (cancel) break;
 
     photos.push(snap());
-    thumbs.push(photos[i].toDataURL('image/jpeg', .75));
+    thumbs.push(photos[i].toDataURL('image/jpeg', .8));
     $('flash').classList.remove('on'); void $('flash').offsetWidth; $('flash').classList.add('on');
     $('rolls').children[i].innerHTML = `<img src="${thumbs[i]}" alt="Ảnh ${i + 1}">`;
     await wait(500);
   }
 
-  running = false; ui1();
+  running = false;
+  activeSlotIdx = 0;
+  drawCamOverlay();
+  ui1();
+
   if (cancel) {
     photos = []; thumbs = []; buildRolls();
     say('Đã dừng. Bấm “Bắt đầu chụp” khi bạn sẵn sàng.');
@@ -175,9 +242,41 @@ async function shoot() {
   setStep(2);
 }
 
+// Tính năng tải ảnh có sẵn từ máy lên
+$('uploadInput').onchange = async e => {
+  const files = [...e.target.files].slice(0, SHOTS);
+  if (!files.length) return;
+  if (files.length < targetCount) {
+    toast(`Frame này cần ít nhất ${targetCount} ảnh nhé.`);
+    e.target.value = '';
+    return;
+  }
+
+  photos = []; thumbs = []; picked = []; cache.clear();
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const img = await new Promise(res => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.src = url;
+    });
+    const canvas = cropToSlotRatio(img, img.naturalWidth, img.naturalHeight, false);
+    photos.push(canvas);
+    thumbs.push(canvas.toDataURL('image/jpeg', .8));
+    URL.revokeObjectURL(url);
+  }
+
+  // Tự động chọn sẵn đúng số ảnh đầu tiên cho tiện
+  picked = photos.slice(0, targetCount).map((_, idx) => idx);
+  e.target.value = '';
+  buildPicks();
+  setStep(2);
+};
+
 $('go').onclick = () => (stream ? shoot() : startCam());
 $('stop').onclick = () => { cancel = true; };
 $('mirror').onchange = () => vid.classList.toggle('flip', $('mirror').checked);
+$('showFrameCam').onchange = drawCamOverlay;
 
 /* ================= BƯỚC 2: CHỌN ẢNH ================= */
 function buildPicks() {
@@ -196,7 +295,7 @@ function togglePick(i) {
   const k = picked.indexOf(i);
   if (k >= 0) picked.splice(k, 1);
   else if (picked.length < targetCount) picked.push(i);
-  else return toast(`Bạn đang chọn chế độ Frame ${targetCount} ảnh.`);
+  else return toast(`Frame bạn chọn cần ${targetCount} ảnh.`);
   refreshPicks(); draw();
 }
 function refreshPicks() {
@@ -205,8 +304,17 @@ function refreshPicks() {
     b.setAttribute('aria-pressed', k >= 0);
     b.lastChild.textContent = k >= 0 ? k + 1 : '';
   });
-  $('hint2').textContent = `Đã chọn ${picked.length}/${targetCount} ảnh (Frame ${targetCount} ảnh). Số trên góc là thứ tự vào khung.`;
+  $('hint2').textContent = `Đã chọn ${picked.length}/${targetCount} ảnh cho ${FRAMES[fi].name}. Số trên góc là thứ tự vào khung.`;
 }
+
+$('autoPick').onclick = () => {
+  picked = photos.slice(0, targetCount).map((_, i) => i);
+  refreshPicks(); draw();
+};
+$('clearPick').onclick = () => {
+  picked = [];
+  refreshPicks(); draw();
+};
 
 /* ================= BƯỚC 3: CHỌN FRAME ================= */
 function buildFrames() {
@@ -285,7 +393,6 @@ function filtered(idx) {
 }
 
 /* ================= VẼ DẢI ẢNH ================= */
-// Scale vừa kín toàn bộ khung (không hở trắng, khớp tỉ lệ dọc/ngang từ camera)
 function coverSlot(c, src, [x, y, w, h]) {
   const r = Math.max(w / src.width, h / src.height);
   const cw = w / r;
@@ -318,6 +425,15 @@ function draw() {
 /* ================= ĐIỀU HƯỚNG ================= */
 const LABELS = { 2: ['Chụp lại', 'Tiếp tục'], 3: ['Quay lại', 'Tiếp tục'], 4: ['Quay lại', 'Lưu ảnh'] };
 
+// Cho phép bấm trực tiếp vào các bước đã hoàn thành trên thanh tiến trình
+[...$('steps').children].forEach((li, i) => {
+  li.onclick = () => {
+    const targetStep = i + 1;
+    if (targetStep === 1 && step > 1) restart();
+    else if (targetStep > 1 && targetStep < step) setStep(targetStep);
+  };
+});
+
 function setStep(s) {
   step = s;
   $('s1').hidden = s !== 1;
@@ -325,6 +441,10 @@ function setStep(s) {
   [2, 3, 4].forEach(k => { $('p' + k).hidden = s !== k; });
   [...$('steps').children].forEach((li, i) => { li.className = i + 1 < s ? 'done' : i + 1 === s ? 'on' : ''; });
 
+  if (s === 1) {
+    buildPreFrames();
+    syncOrientation();
+  }
   if (s === 3) buildFrames();
   if (s === 4) buildChips();
   if (s > 1) {
@@ -338,11 +458,10 @@ function setStep(s) {
 
 function restart() {
   photos = []; thumbs = []; picked = []; cache.clear();
-  fi = FRAMES.findIndex(f => f.slots.length === targetCount);
-  if (fi < 0) fi = 0;
+  activeSlotIdx = 0;
   filt = 0;
   buildRolls();
-  say('Bấm “Bắt đầu chụp” khi bạn sẵn sàng.');
+  say('Chọn mẫu frame rồi bấm “Bắt đầu chụp” khi bạn sẵn sàng.');
   setStep(1); ui1();
 }
 
@@ -367,10 +486,11 @@ function save() {
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }, 'image/png');
   } catch (e) {
-    toast('Không lưu được. Hãy mở trang qua localhost, đừng mở trực tiếp file index.html.');
+    toast('Không lưu được. Hãy mở trang qua localhost hoặc GitHub Pages.');
   }
 }
 
+buildPreFrames();
 syncOrientation();
 buildRolls();
 ui1();
