@@ -29,17 +29,25 @@
     <div class="lace lace-top"></div>
     <h1>photobooth</h1>
     <ol class="steps" id="steps">
-      <li class="on">Chụp</li><li>Chọn ảnh</li><li>Chọn frame</li><li>Filter</li>
+      <li class="on" data-step="1">Chụp</li>
+      <li data-step="2">Chọn ảnh</li>
+      <li data-step="3">Chọn frame</li>
+      <li data-step="4">Filter</li>
     </ol>
   </header>
 
   <main>
-    <!-- BƯỚC 1: CHỤP -->
+    <!-- BƯỚC 1: CHỤP HOẶC TẢI ẢNH -->
     <section id="s1" class="capture portrait-mode">
       <div class="camwrap">
         <div class="cam">
           <video id="vid" class="flip" playsinline muted></video>
-          <div id="camEmpty" class="cam-empty">Chưa bật camera</div>
+          <canvas id="camOverlay" class="cam-overlay" aria-hidden="true"></canvas>
+          <div id="slotBadge" class="slot-badge" hidden>Ô 1/4</div>
+          <div id="camEmpty" class="cam-empty">
+            <span>Chưa bật camera</span>
+            <small>Bấm “Bật camera” hoặc tải ảnh có sẵn lên nhé</small>
+          </div>
           <div id="cd" class="count" aria-live="assertive"></div>
           <div id="flash"></div>
         </div>
@@ -47,19 +55,33 @@
       </div>
 
       <div class="card side">
-        <h2>Chụp 6 tấm</h2>
-        <p id="msg">Chọn kiểu frame và bật camera để bắt đầu nhé.</p>
-
-        <div class="mode-select" role="group" aria-label="Chọn số lượng ảnh trong frame">
-          <button type="button" class="mode-btn" data-count="4" aria-pressed="true">Frame 4 ảnh (dọc)</button>
-          <button type="button" class="mode-btn" data-count="3" aria-pressed="false">Frame 3 ảnh (ngang)</button>
+        <div class="card-head">
+          <h2>Chọn frame & Chụp</h2>
+          <div class="timer-pill" role="group" aria-label="Thời gian đếm ngược">
+            <button type="button" class="t-btn" data-sec="3">3s</button>
+            <button type="button" class="t-btn" data-sec="5" aria-pressed="true">5s</button>
+            <button type="button" class="t-btn" data-sec="8">8s</button>
+          </div>
         </div>
+        <p id="msg">Chọn mẫu frame bạn thích rồi bật camera nhé.</p>
+
+        <!-- Chọn trước Frame ngay từ bước 1 -->
+        <div class="pre-frames" id="preFrames" aria-label="Chọn mẫu frame trước khi chụp"></div>
 
         <ol class="rolls" id="rolls"></ol>
-        <label class="check"><input type="checkbox" id="mirror" checked> Lật gương</label>
+
+        <div class="toggles">
+          <label class="check"><input type="checkbox" id="mirror" checked> Lật gương</label>
+          <label class="check"><input type="checkbox" id="showFrameCam" checked> Hiện frame lên camera</label>
+        </div>
+
         <div class="actions">
           <button id="go" class="primary">Bật camera</button>
           <button id="stop" class="ghost" hidden>Dừng</button>
+          <label class="ghost upload-btn" title="Chọn tối đa 6 ảnh từ thiết bị">
+            Tải ảnh lên
+            <input type="file" id="uploadInput" accept="image/*" multiple hidden>
+          </label>
         </div>
       </div>
     </section>
@@ -73,15 +95,23 @@
 
       <div class="card panel">
         <div id="p2">
-          <h2>Chọn ảnh</h2>
+          <div class="card-head">
+            <h2>Chọn ảnh</h2>
+            <div class="quick-picks">
+              <button type="button" id="autoPick" class="mini-btn">Chọn nhanh</button>
+              <button type="button" id="clearPick" class="mini-btn">Bỏ chọn</button>
+            </div>
+          </div>
           <p class="hint" id="hint2"></p>
           <div class="picks" id="picks"></div>
         </div>
+
         <div id="p3" hidden>
           <h2>Chọn frame</h2>
           <div class="frames" id="frames"></div>
           <p class="hint" id="hint3"></p>
         </div>
+
         <div id="p4" hidden>
           <h2>Chọn filter</h2>
           <div class="chips" id="chips"></div>
