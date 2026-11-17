@@ -8,15 +8,15 @@ const SLOTS_2 = [[85, 50, 538, 412], [83, 544, 540, 413], [98, 1058, 508, 374]];
 const SLOTS_3 = [[85, 50, 538, 412], [85, 544, 538, 413], [100, 1040, 520, 410]];
 
 const FRAMES = [
-  { name: 'Frame 1',   src: 'frame/frame 1.png',   slots: SLOTS_4 },
-  { name: 'Frame 1.1', src: 'frame/frame 1.1.png', slots: SLOTS_4 },
-  { name: 'Frame 1.2', src: 'frame/frame 1.2.png', slots: SLOTS_4 },
-  { name: 'Frame 2',   src: 'frame/frame 2.png',   slots: SLOTS_2 },
-  { name: 'Frame 2.1', src: 'frame/frame 2.1.png', slots: SLOTS_2 },
-  { name: 'Frame 2.2', src: 'frame/frame 2.2.png', slots: SLOTS_2 },
-  { name: 'Frame 3',   src: 'frame/frame 3.png',   slots: SLOTS_3 },
-  { name: 'Frame 3.1', src: 'frame/frame 3.1.png', slots: SLOTS_3 },
-  { name: 'Frame 3.2', src: 'frame/frame 3.2.png', slots: SLOTS_3 },
+  { name: 'Frame 1',   src: 'frame/frame1.png',   slots: SLOTS_4 },
+  { name: 'Frame 1.1', src: 'frame/frame1.1.png', slots: SLOTS_4 },
+  { name: 'Frame 1.2', src: 'frame/frame1.2.png', slots: SLOTS_4 },
+  { name: 'Frame 2',   src: 'frame/frame2.png',   slots: SLOTS_2 },
+  { name: 'Frame 2.1', src: 'frame/frame2.1.png', slots: SLOTS_2 },
+  { name: 'Frame 2.2', src: 'frame/frame2.2.png', slots: SLOTS_2 },
+  { name: 'Frame 3',   src: 'frame/frame3.png',   slots: SLOTS_3 },
+  { name: 'Frame 3.1', src: 'frame/frame3.1.png', slots: SLOTS_3 },
+  { name: 'Frame 3.2', src: 'frame/frame3.2.png', slots: SLOTS_3 },
 ];
 
 const FILTERS = [
@@ -31,7 +31,7 @@ const FILTERS = [
 
 /* ================= KHỞI TẠO ================= */
 const $ = id => document.getElementById(id);
-const asset = p => encodeURI(ROOT + p);
+const asset = p => ROOT + p;
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const cv = $('cv'), ctx = cv.getContext('2d'), vid = $('vid'), cd = $('cd');
 const camOverlay = $('camOverlay'), octx = camOverlay.getContext('2d');
@@ -44,9 +44,9 @@ let photos = [], thumbs = [], picked = [];
 let step = 1, fi = 0, filt = 0;
 const cache = new Map();
 
-// nạp decor + nền + ren
+// nạp decor + nền + ren (đã dùng tên không dấu)
 document.querySelectorAll('[data-d]').forEach(e => { e.src = asset('decor/' + e.dataset.d); e.onerror = () => e.remove(); });
-document.body.style.setProperty('--bg', `url("${asset('decor/nền.png')}")`);
+document.body.style.setProperty('--bg', `url("${asset('decor/nen.png')}")`);
 document.body.style.setProperty('--ren', `url("${asset('decor/ren.png')}")`);
 
 // nạp frame
@@ -242,7 +242,6 @@ async function shoot() {
   setStep(2);
 }
 
-// Tính năng tải ảnh có sẵn từ máy lên
 $('uploadInput').onchange = async e => {
   const files = [...e.target.files].slice(0, SHOTS);
   if (!files.length) return;
@@ -266,7 +265,6 @@ $('uploadInput').onchange = async e => {
     URL.revokeObjectURL(url);
   }
 
-  // Tự động chọn sẵn đúng số ảnh đầu tiên cho tiện
   picked = photos.slice(0, targetCount).map((_, idx) => idx);
   e.target.value = '';
   buildPicks();
@@ -425,7 +423,6 @@ function draw() {
 /* ================= ĐIỀU HƯỚNG ================= */
 const LABELS = { 2: ['Chụp lại', 'Tiếp tục'], 3: ['Quay lại', 'Tiếp tục'], 4: ['Quay lại', 'Lưu ảnh'] };
 
-// Cho phép bấm trực tiếp vào các bước đã hoàn thành trên thanh tiến trình
 [...$('steps').children].forEach((li, i) => {
   li.onclick = () => {
     const targetStep = i + 1;
