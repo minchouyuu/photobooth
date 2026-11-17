@@ -8,15 +8,15 @@ const SLOTS_2 = [[85, 50, 538, 412], [83, 544, 540, 413], [98, 1058, 508, 374]];
 const SLOTS_3 = [[85, 50, 538, 412], [85, 544, 538, 413], [100, 1040, 520, 410]];
 
 const FRAMES = [
-  { name: 'Frame 1',   src: 'frame/frame1.png',   slots: SLOTS_4 },
-  { name: 'Frame 1.1', src: 'frame/frame1.1.png', slots: SLOTS_4 },
-  { name: 'Frame 1.2', src: 'frame/frame1.2.png', slots: SLOTS_4 },
-  { name: 'Frame 2',   src: 'frame/frame2.png',   slots: SLOTS_2 },
-  { name: 'Frame 2.1', src: 'frame/frame2.1.png', slots: SLOTS_2 },
-  { name: 'Frame 2.2', src: 'frame/frame2.2.png', slots: SLOTS_2 },
-  { name: 'Frame 3',   src: 'frame/frame3.png',   slots: SLOTS_3 },
-  { name: 'Frame 3.1', src: 'frame/frame3.1.png', slots: SLOTS_3 },
-  { name: 'Frame 3.2', src: 'frame/frame3.2.png', slots: SLOTS_3 },
+  { name: 'Frame 1',   src: 'frame/frame 1.png',   slots: SLOTS_4 },
+  { name: 'Frame 1.1', src: 'frame/frame 1.1.png', slots: SLOTS_4 },
+  { name: 'Frame 1.2', src: 'frame/frame 1.2.png', slots: SLOTS_4 },
+  { name: 'Frame 2',   src: 'frame/frame 2.png',   slots: SLOTS_2 },
+  { name: 'Frame 2.1', src: 'frame/frame 2.1.png', slots: SLOTS_2 },
+  { name: 'Frame 2.2', src: 'frame/frame 2.2.png', slots: SLOTS_2 },
+  { name: 'Frame 3',   src: 'frame/frame 3.png',   slots: SLOTS_3 },
+  { name: 'Frame 3.1', src: 'frame/frame 3.1.png', slots: SLOTS_3 },
+  { name: 'Frame 3.2', src: 'frame/frame 3.2.png', slots: SLOTS_3 },
 ];
 
 const FILTERS = [
@@ -31,7 +31,7 @@ const FILTERS = [
 
 /* ================= KHỞI TẠO ================= */
 const $ = id => document.getElementById(id);
-const asset = p => ROOT + p;
+const asset = p => encodeURI(ROOT + p);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const cv = $('cv'), ctx = cv.getContext('2d'), vid = $('vid'), cd = $('cd');
 const camOverlay = $('camOverlay'), octx = camOverlay.getContext('2d');
@@ -44,19 +44,28 @@ let photos = [], thumbs = [], picked = [];
 let step = 1, fi = 0, filt = 0;
 const cache = new Map();
 
-// nạp decor + nền + ren (đã dùng tên không dấu)
-document.querySelectorAll('[data-d]').forEach(e => { e.src = asset('decor/' + e.dataset.d); e.onerror = () => e.remove(); });
+// nạp decor + nền + ren trong files/decor/
+document.querySelectorAll('[data-d]').forEach(e => {
+  e.src = asset('decor/' + e.dataset.d);
+  e.onerror = () => e.remove();
+});
 document.body.style.setProperty('--bg', `url("${asset('decor/nen.png')}")`);
 document.body.style.setProperty('--ren', `url("${asset('decor/ren.png')}")`);
 
-// nạp frame
+// nạp frame (tự động thử cả tên có dấu cách và viết liền)
 const imgs = FRAMES.map((f, idx) => {
   const i = new Image();
   i.onload = () => {
     if (step === 1 && idx === fi) drawCamOverlay();
     if (step > 1) draw();
   };
-  i.onerror = () => toast(`Không tìm thấy "${ROOT + f.src}". Kiểm tra lại thư mục files/frame/.`);
+  i.onerror = () => {
+    const altSrc = f.src.replace(' ', '');
+    if (!i.dataset.tried) {
+      i.dataset.tried = '1';
+      i.src = asset(altSrc);
+    }
+  };
   i.src = asset(f.src);
   return i;
 });
@@ -118,7 +127,7 @@ function drawCamOverlay() {
   octx.restore();
 }
 
-// Dựng danh sách chọn nhanh Frame ngay tại Bước 1
+// Dựng danh sách chọn nhanh Frame dạng lướt ngang tại Bước 1
 function buildPreFrames() {
   const box = $('preFrames');
   box.innerHTML = '';
@@ -127,7 +136,23 @@ function buildPreFrames() {
     b.type = 'button';
     b.className = 'pre-frame-btn';
     b.setAttribute('aria-pressed', i === fi);
-    b.innerHTML = `<img src="${asset(f.src)}" alt="${f.name}"><span>${f.name}</span><small>${f.slots.length} ảnh</small>`;
+
+    const img = document.createElement('img');
+    img.src = asset(f.src);
+    img.alt = f.name;
+    img.onerror = () => {
+      if (!img.dataset.tried) {
+        img.dataset.tried = '1';
+        img.src = asset(f.src.replace(' ', ''));
+      }
+    };
+
+    const title = document.createElement('span');
+    title.textContent = f.name;
+    const sub = document.createElement('small');
+    sub.textContent = `${f.slots.length} ảnh`;
+
+    b.append(img, title, sub);
     b.onclick = () => {
       if (running) return;
       fi = i;
@@ -167,7 +192,7 @@ async function startCam() {
     say(`Sẵn sàng rồi! Web sẽ chụp ${SHOTS} tấm, mỗi tấm đếm ngược ${waitSec} giây.`);
     drawCamOverlay();
   } catch (e) {
-    say('Không mở được camera. Hãy cho phép quyền camera hoặc dùng nút “Tải ảnh lên”.');
+    say('Không mở được camera. Hãy mở link bằng Safari/Chrome (không dùng trình duyệt trong Messenger) hoặc bấm “Tải ảnh lên”.');
   }
   ui1();
 }
@@ -314,7 +339,7 @@ $('clearPick').onclick = () => {
   refreshPicks(); draw();
 };
 
-/* ================= BƯỚC 3: CHỌN FRAME ================= */
+/* ================= BƯỚC 3: CHỌN FRAME (LƯỚT NGANG) ================= */
 function buildFrames() {
   const box = $('frames');
   box.innerHTML = '';
@@ -323,11 +348,25 @@ function buildFrames() {
     const b = document.createElement('button');
     b.className = 'frame-opt';
     b.setAttribute('aria-pressed', i === fi);
-    b.innerHTML = `<img src="${asset(f.src)}" alt="${f.name}"><small>${f.name}</small>`;
+
+    const img = document.createElement('img');
+    img.src = asset(f.src);
+    img.alt = f.name;
+    img.onerror = () => {
+      if (!img.dataset.tried) {
+        img.dataset.tried = '1';
+        img.src = asset(f.src.replace(' ', ''));
+      }
+    };
+
+    const sub = document.createElement('small');
+    sub.textContent = f.name;
+
+    b.append(img, sub);
     b.onclick = () => { fi = i; buildFrames(); draw(); };
     box.appendChild(b);
   });
-  $('hint3').textContent = `Đang hiển thị các mẫu Frame ${targetCount} ảnh.`;
+  $('hint3').textContent = `Lướt ngang để chọn các mẫu Frame ${targetCount} ảnh.`;
 }
 
 /* ================= BƯỚC 4: FILTER ================= */
@@ -483,7 +522,7 @@ function save() {
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }, 'image/png');
   } catch (e) {
-    toast('Không lưu được. Hãy mở trang qua localhost hoặc GitHub Pages.');
+    toast('Không lưu được. Hãy mở trang qua Safari hoặc Chrome.');
   }
 }
 
